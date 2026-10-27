@@ -6,8 +6,13 @@ from flask import Flask, render_template, request, redirect, url_for
 app = Flask(__name__)
 app.secret_key = "aquaculture_secret_key"
 
-INVENTORY_FILE = "/tmp/store_feed_inventory.csv"
-REQUESTS_FILE = "/tmp/feed_requests_history.csv"
+# Render-ல் ஓடும்போது /tmp/ ஐயும், லேப்டாப்பில் (Windows) ஓடும்போது லோக்கல் ஃபோல்டரையும் பயன்படுத்தும்
+if os.environ.get("RENDER") or os.name != "nt":
+    INVENTORY_FILE = "/tmp/store_feed_inventory.csv"
+    REQUESTS_FILE = "/tmp/feed_requests_history.csv"
+else:
+    INVENTORY_FILE = "store_feed_inventory.csv"
+    REQUESTS_FILE = "feed_requests_history.csv""
 
 DEPARTMENTS = [
     "Maturation", "Hatchery", "Grow-out Pond", 
