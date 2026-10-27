@@ -12,7 +12,7 @@ if os.environ.get("RENDER") or os.name != "nt":
     REQUESTS_FILE = "/tmp/feed_requests_history.csv"
 else:
     INVENTORY_FILE = "store_feed_inventory.csv"
-    REQUESTS_FILE = "feed_requests_history.csv""
+    REQUESTS_FILE = "feed_requests_history.csv"
 
 DEPARTMENTS = [
     "Maturation", "Hatchery", "Grow-out Pond", 
