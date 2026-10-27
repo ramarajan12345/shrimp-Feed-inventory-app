@@ -44,8 +44,10 @@ def index():
     inv_df = pd.read_csv(INVENTORY_FILE)
     req_df = pd.read_csv(REQUESTS_FILE)
     
-    role = request.args.get("role", "Department Supervisor")
+    # role மற்றும் store_password-ஐ பெறுகிறோம்
+    role = request.args.get("role") or request.form.get("role", "Department Supervisor")
     store_pass = request.form.get("store_password", "")
+    
     message = None
     msg_type = "success"
 
@@ -81,75 +83,83 @@ def index():
 
         # 2. Store Keeper Add / Restock Feed
         elif action_type == "manage_inventory":
-            feed_action = request.form.get("feed_action")
-            feed_name = request.form.get("feed_name_input")
-            existing_feed = request.form.get("existing_feed")
-            try:
-                stock_qty = float(request.form.get("stock_qty", 0))
-            except ValueError:
-                stock_qty = 0.0
-            store_rem = request.form.get("store_rem", "")
-
-            target_feed = feed_name.strip() if feed_action == "new" else existing_feed
-
-            if feed_action == "new" and not target_feed:
-                message = "தயவுசெய்து புதிய ஃபீட்டின் பெயரைக் குறிப்பிடவும்!"
+            if store_pass != "admin123":
+                message = "தவறான பாஸ்வேர்ட்! சரியான பாஸ்வேர்டை (admin123) உள்ளிடவும்."
                 msg_type = "danger"
             else:
-                if feed_action == "new":
-                    if target_feed in inv_df["Feed_Name_Size"].values:
-                        message = "இந்த ஃபீட் பெயர் ஏற்கனவே ஸ்டாக்கில் உள்ளது!"
-                        msg_type = "warning"
-                    else:
-                        new_feed = pd.DataFrame([{
-                            "Feed_Name_Size": target_feed, "Total_Stock_Kg": stock_qty,
-                            "Store_Remarks": store_rem, "Last_Updated": str(date.today())
-                        }])
-                        inv_df = pd.concat([inv_df, new_feed], ignore_index=True)
-                        inv_df.to_csv(INVENTORY_FILE, index=False)
-                        message = f"புதிய ஃபீட் '{target_feed}' வெற்றிகரமாக சேர்க்கப்பட்டது!"
-                        msg_type = "success"
+                feed_action = request.form.get("feed_action")
+                feed_name = request.form.get("feed_name_input")
+                existing_feed = request.form.get("existing_feed")
+                try:
+                    stock_qty = float(request.form.get("stock_qty", 0))
+                except ValueError:
+                    stock_qty = 0.0
+                store_rem = request.form.get("store_rem", "")
+
+                target_feed = feed_name.strip() if feed_action == "new" else existing_feed
+
+                if feed_action == "new" and not target_feed:
+                    message = "தயவுசெய்து புதிய ஃபீட்டின் பெயரைக் குறிப்பிடவும்!"
+                    msg_type = "danger"
                 else:
-                    inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Total_Stock_Kg"] += stock_qty
-                    inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Store_Remarks"] = store_rem
-                    inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Last_Updated"] = str(date.today())
-                    inv_df.to_csv(INVENTORY_FILE, index=False)
-                    message = f"'{target_feed}' ஸ்டாக் வெற்றிகரமாக அப்டேட் செய்யப்பட்டது!"
-                    msg_type = "success"
+                    if feed_action == "new":
+                        if target_feed in inv_df["Feed_Name_Size"].values:
+                            message = "இந்த ஃபீட் பெயர் ஏற்கனவே ஸ்டாக்கில் உள்ளது!"
+                            msg_type = "warning"
+                        else:
+                            new_feed = pd.DataFrame([{
+                                "Feed_Name_Size": target_feed, "Total_Stock_Kg": stock_qty,
+                                "Store_Remarks": store_rem, "Last_Updated": str(date.today())
+                            }])
+                            inv_df = pd.concat([inv_df, new_feed], ignore_index=True)
+                            inv_df.to_csv(INVENTORY_FILE, index=False)
+                            message = f"புதிய ஃபீட் '{target_feed}' வெற்றிகரமாக சேர்க்கப்பட்டது!"
+                            msg_type = "success"
+                    else:
+                        inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Total_Stock_Kg"] += stock_qty
+                        inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Store_Remarks"] = store_rem
+                        inv_df.loc[inv_df["Feed_Name_Size"] == target_feed, "Last_Updated"] = str(date.today())
+                        inv_df.to_csv(INVENTORY_FILE, index=False)
+                        message = f"'{target_feed}' ஸ்டாக் வெற்றிகரமாக அப்டேட் செய்யப்பட்டது!"
+                        msg_type = "success"
 
         # 3. Store Keeper Approve / Reject Request
         elif action_type == "process_request":
-            req_id = request.form.get("req_id")
-            decision = request.form.get("decision")
-            rem = request.form.get("store_remark", "")
+            if store_pass != "admin123":
+                message = "தவறான பாஸ்வேர்ட்! சரியான பாஸ்வேர்டை (admin123) உள்ளிடவும்."
+                msg_type = "danger"
+            else:
+                req_id = request.form.get("req_id")
+                decision = request.form.get("decision")
+                rem = request.form.get("store_remark", "")
 
-            req_row = req_df[req_df["Request_ID"] == req_id]
-            if not req_row.empty:
-                feed_name = req_row.iloc[0]["Feed_Name_Size"]
-                req_qty = req_row.iloc[0]["Quantity_Requested_Kg"]
-                
-                current_stock = inv_df.loc[inv_df["Feed_Name_Size"] == feed_name, "Total_Stock_Kg"].values
-                stock_avail = current_stock[0] if len(current_stock) > 0 else 0
+                req_row = req_df[req_df["Request_ID"] == req_id]
+                if not req_row.empty:
+                    feed_name = req_row.iloc[0]["Feed_Name_Size"]
+                    req_qty = req_row.iloc[0]["Quantity_Requested_Kg"]
+                    
+                    current_stock = inv_df.loc[inv_df["Feed_Name_Size"] == feed_name, "Total_Stock_Kg"].values
+                    stock_avail = current_stock[0] if len(current_stock) > 0 else 0
 
-                if decision == "approve":
-                    if stock_avail >= req_qty:
-                        inv_df.loc[inv_df["Feed_Name_Size"] == feed_name, "Total_Stock_Kg"] -= req_qty
-                        inv_df.to_csv(INVENTORY_FILE, index=False)
-                        
-                        req_df.loc[req_df["Request_ID"] == req_id, "Status"] = "Approved & Issued"
+                    if decision == "approve":
+                        if stock_avail >= req_qty:
+                            inv_df.loc[inv_df["Feed_Name_Size"] == feed_name, "Total_Stock_Kg"] -= req_qty
+                            inv_df.to_csv(INVENTORY_FILE, index=False)
+                            
+                            req_df.loc[req_df["Request_ID"] == req_id, "Status"] = "Approved & Issued"
+                            req_df.loc[req_df["Request_ID"] == req_id, "Store_Remarks"] = rem
+                            req_df.to_csv(REQUESTS_FILE, index=False)
+                            message = f"Request {req_id} Approved & Issued!"
+                            msg_type = "success"
+                        else:
+                            message = "ஸ்டோரில் போதுமான ஃபீட் இல்லை!"
+                            msg_type = "danger"
+                    else:
+                        req_df.loc[req_df["Request_ID"] == req_id, "Status"] = "Delayed / Out of Stock"
                         req_df.loc[req_df["Request_ID"] == req_id, "Store_Remarks"] = rem
                         req_df.to_csv(REQUESTS_FILE, index=False)
-                        message = f"Request {req_id} Approved & Issued!"
-                        msg_type = "success"
-                    else:
-                        message = "ஸ்டோரில் போதுமான ஃபீட் இல்லை!"
-                        msg_type = "danger"
-                else:
-                    req_df.loc[req_df["Request_ID"] == req_id, "Status"] = "Delayed / Out of Stock"
-                    req_df.loc[req_df["Request_ID"] == req_id, "Store_Remarks"] = rem
-                    req_df.to_csv(REQUESTS_FILE, index=False)
-                    message = f"Request {req_id} marked as Out of Stock."
-                    msg_type = "warning"
+                        message = f"Request {req_id} marked as Out of Stock."
+                        msg_type = "warning"
 
         inv_df = pd.read_csv(INVENTORY_FILE)
         req_df = pd.read_csv(REQUESTS_FILE)
